@@ -1,121 +1,38 @@
 const express = require("express");
-const AuthModel = require("./auth.model");
-const FlightModel = require("./flight.model");
-const BookingModel = require("./Booking.model");
+const PlayerModel = require("./player.model");
 
 const app = express.Router();
 
-// Resister Post Route
-app.post("/register", async (req, res) => {
+
+app.post("/player", async (req, res) => {
   try {
-    let newUser = await AuthModel.create(req.body);
-    res.send(newUser);
+    let newPlayer = await PlayerModel.create(req.body);
+    res.send(newPlayer);
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
 
-// Login Post Route
-app.post("/login", async (req, res) => {
-  let { email, password } = req.body;
+app.get("/player", async (req, res) => {
   try {
-    let newUser = await AuthModel.findOne({ email, password });
-    if (newUser) {
-      res.send("Login Success");
-    } else {
-      res.send("Login Failure");
+    let players = await PlayerModel.find();
+    res.send(players);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+app.get("/randomword", async (req, res) => {
+    let N=Math.floor(Math.random() * 6) + 5;
+    let result = '';
+    const ch = 'abcdefghijklmnopqrstuvwxyz';
+    const chL = ch.length;
+    for (let i = 0; i < N; i++) {
+      result += ch.charAt(Math.floor(Math.random() * chL));
     }
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+    res.send(result)
+  
 });
 
-//   Add Flights to DB Using Post Route
-app.post("/flights", async (req, res) => {
-  try {
-    let newFlight = await FlightModel.create(req.body);
-    res.send(newFlight);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-// Get All flights using get  Route
-app.get("/flights", async (req, res) => {
-  try {
-    let Flights = await FlightModel.find();
-    res.send(Flights);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-// Get a single flight using ID and get  Route
-app.get("/flights/:id", async (req, res) => {
-  let { id } = req.params;
-  console.log(id);
-  try {
-    let Flight = await FlightModel.findById(id);
-    if (Flight) {
-      res.send(Flight);
-    } else {
-      res.send("this Flight is not exists");
-    }
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-// Update a single flight using ID and Patch  Route
-app.patch("/flights/:id", async (req, res) => {
-  let { id } = req.params;
-  console.log(id);
-  try {
-    let Flight = await FlightModel.findByIdAndUpdate(id, req.body);
-    if (Flight) {
-      res.send(Flight);
-    } else {
-      res.send("this Flight is not exists");
-    }
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-// Delete a single flight using ID and Delete  Route
-app.delete("/flights/:id", async (req, res) => {
-  let { id } = req.params;
-  console.log(id);
-  try {
-    let Flight = await FlightModel.findByIdAndDelete(id);
-    if (Flight) {
-      res.send("DELETED successfully");
-    } else {
-      res.send("this Flight is not exists");
-    }
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-//Book a Flight using Post route and USERID of both Flight and User
-app.post("/booking", async (req, res) => {
-  try {
-    let newBooking = await BookingModel.create(req.body);
-    res.send(newBooking);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-// Get All Booking using get  Route
-app.get("/dashboard", async (req, res) => {
-  try {
-    let Bookings = await BookingModel.find();
-    res.send(Bookings);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
 
 module.exports = app;
