@@ -7,6 +7,13 @@ const ContactModel = require("./contact.model");
 const app = express.Router();
 
 
+
+app.get("/srb", (req, res) => {
+ 
+  res.send("hello soumya")
+
+})
+
 app.post("/signup", (req, res) => {
   const {email,name, password} = req.body;
   bcrypt.hash(password, 5, async function(err, hash) {
