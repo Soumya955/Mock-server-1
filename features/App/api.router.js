@@ -1,8 +1,6 @@
 const express = require("express");
-const bcrypt = require("bcrypt/bcrypt")
-const jwt = require("jsonwebtoken");
 const UserModel = require("./User.model");
-const ContactModel = require("./contact.model");
+const PropertyModel = require("./property.model");
 
 const app = express.Router();
 
@@ -14,88 +12,92 @@ app.get("/srb", (req, res) => {
 
 })
 
-app.post("/signup", (req, res) => {
+app.post("/signup", async(req, res) => {
   const {email,name, password} = req.body;
-  bcrypt.hash(password, 5, async function(err, hash) {
-      if(err){
-          res.send("Something went wrong")
-      }
-      const user = new UserModel({
-          email,
-          name,
-          password : hash
-      })
-      try{
-          await user.save()
-          res.json({msg : "Signup is successfull"})
-      }
-      catch(err){
-          console.log(err)
-          res.send("Something wrong")
-      }
-  });
+  const user = new UserModel({
+    email,
+    name,
+    password ,
+  })
+   try{
+    await user.save()
+    res.json({msg : "Signup is successfull"})
+   }
+   catch(err){
+    console.log(err)
+    res.send("Something wrong")
+   }
 })
 
 app.post("/login", async (req, res) => {
   const {email, password} = req.body;
   const user = await UserModel.findOne({email})
-  const hash = user.password
-  bcrypt.compare(password, hash, function(err, result) {
-      if(err){
-          res.send("Something went wrong")
-      }
-      if(result){
-          const token = jwt.sign({ userId : user._id }, "srb");
-          res.json({message : "Login Successfull",token,user})
-      }
-      else{
-          res.send("Invalid Credentials")
-      }
-  });
+  if(user.password==password){
+    res.json({message : "Login Successfull",user})
+  }else{
+    res.send("Invalid Credentials")
+  }
 })
 
-app.post("/contacts", async (req, res) => {
+app.post("/property", async (req, res) => {
     try {
-      let newcontact = await ContactModel.create(req.body);
-      res.send(newcontact);
+      let newproperty = await PropertyModel.create(req.body);
+      res.send(newproperty);
     } catch (error) {
       res.status(500).send(error.message);
     }
   });
 
   
-  app.get("/contacts/:userid", async (req, res) => {
+  app.get("/property", async (req, res) => {
     try {
-      let { userid } = req.params;
-      let data = await ContactModel.find({userid:userid})
-     // console.log(userid,data,"ll")
+      let data = await PropertyModel.find()
+      res.send(data);
+    } catch (error) {
+      res.status(500).send(error.message);
+    }
+  });
+  app.get("/property/:id", async (req, res) => {
+    const {id}=req.params;
+    try {
+      let data = await PropertyModel.find({_id:id})
       res.send(data);
     } catch (error) {
       res.status(500).send(error.message);
     }
   });
 
-  app.patch("/contacts/:id", async (req, res) => {
+  app.patch("/user/:id", async (req, res) => {
     try {
       let { id } = req.params;
       console.log(id)
-      let data = await ContactModel.findByIdAndUpdate(id,req.body)
-      console.log(data)
+      let data = await UserModel.findByIdAndUpdate(id,req.body)
       res.send(data);
     } catch (error) {
       res.status(500).send(error.message);
     }
   });
 
-  app.delete("/contacts/:id", async (req, res) => {
-    let {id}=req.params;
-    try {
-      let newJob = await ContactModel.findByIdAndDelete(id)
-      res.send("Deleted");
-    } catch (error) {
-      res.status(500).send(error.message);
-    }
-  });
+  app.get("/search/:search", async (req, res) => {
+        try {
+          let { search } = req.params;
+          console.log(search)
+          let data = await PropertyModel.find({$or:[{title:search},{location:search}]})
+          res.send(data);
+        } catch (error) {
+          res.status(500).send(error.message);
+        }
+      });
+
+  // app.delete("/contacts/:id", async (req, res) => {
+  //   let {id}=req.params;
+  //   try {
+  //     let newJob = await ContactModel.findByIdAndDelete(id)
+  //     res.send("Deleted");
+  //   } catch (error) {
+  //     res.status(500).send(error.message);
+  //   }
+  // });
 
  
 
@@ -110,6 +112,7 @@ app.post("/contacts", async (req, res) => {
 //       res.status(500).send(error.message);
 //     }
 //   });
+// axios react-loading react-loading-skeleton react-spinners sweetalert2
 
 
   
