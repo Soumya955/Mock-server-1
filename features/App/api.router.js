@@ -1,138 +1,133 @@
 const express = require("express");
+const bcrypt = require("bcrypt/bcrypt");
+const jwt = require("jsonwebtoken");
 const UserModel = require("./User.model");
-const PropertyModel = require("./property.model");
+const CarModel = require("./Car.model");
 
 const app = express.Router();
 
+app.get("/", async (req, res) => {
+    res.send('working');
+});
 
-
-app.get("/srb", (req, res) => {
- 
-  res.send("hello soumya")
-
-})
-
-app.post("/signup", async(req, res) => {
-  const {email,name, password} = req.body;
-  const user = new UserModel({
-    email,
-    name,
-    password ,
-  })
-   try{
-    await user.save()
-    res.json({msg : "Signup is successfull"})
-   }
-   catch(err){
-    console.log(err)
-    res.send("Something wrong")
-   }
-})
+app.post("/signup", async (req, res) => {
+  const { email, password, name, address, phone } = req.body;
+  const user1 = await UserModel.findOne({ email });
+  if (!user1) {
+    bcrypt.hash(password, 5, async function (err, hash) {
+      if (err) {
+        res.send("Something went wrong");
+      }
+      const user = new UserModel({
+        email,
+        name,
+        address,
+        phone,
+        password: hash,
+      });
+      try {
+        await user.save();
+        res.send("Signup is successfull");
+      } catch (err) {
+        console.log(err);
+        res.send("Something went wrong");
+      }
+    });
+  } else {
+    res.send("Email is already Exists");
+  }
+});
 
 app.post("/login", async (req, res) => {
-  const {email, password} = req.body;
-  const user = await UserModel.findOne({email})
-  if(user.password==password){
-    res.json({message : "Login Successfull",user})
-  }else{
-    res.send("Invalid Credentials")
+  const { email, password } = req.body;
+  const user = await UserModel.findOne({ email });
+  const hash = user.password;
+  bcrypt.compare(password, hash, function (err, result) {
+    if (err) {
+      res.send("Something went wrong");
+    }
+    if (result) {
+      const token = jwt.sign({ userId: user._id }, "srb");
+      res.json({ message: "Login Successfull", token, user });
+    } else {
+      res.send("Invalid Credentials");
+    }
+  });
+});
+
+app.post("/Car", async (req, res) => {
+  try {
+    let newCar = await CarModel.create(req.body);
+    res.send(newCar);
+  } catch (error) {
+    res.status(500).send(error.message);
   }
-})
+});
 
-app.post("/property", async (req, res) => {
-    try {
-      let newproperty = await PropertyModel.create(req.body);
-      res.send(newproperty);
-    } catch (error) {
-      res.status(500).send(error.message);
-    }
-  });
+app.get("/Car", async (req, res) => {
+  let { userId } = req.params;
+  let { color, price, mileage } = req.query;
+  let [price1, price2] = price.split("-");
+  let [mileage1, mileage2] = mileage.split("-");
+  try {
+    let data = await CarModel.find(
+      color && price && mileage
+        ? {
+            colors: color,
+            listPrice: { $gte: price1, $lte: price2 },
+            mileage: { $gte: mileage1, $lte: mileage2 },
+          }
+        : color && mileage
+        ? { colors: color, mileage: { $gte: mileage1, $lte: mileage2 } }
+        : price && mileage
+        ? {
+            listPrice: { $gte: price1, $lte: price2 },
+            mileage: { $gte: mileage1, $lte: mileage2 },
+          }
+        : price && color
+        ? { colors: color, listPrice: { $gte: price1, $lte: price2 } }
+        : color
+        ? { colors: color }
+        : price
+        ? { listPrice: { $gte: price1, $lte: price2 } }
+        : mileage
+        ? { mileage: { $gte: mileage1, $lte: mileage2 } }
+        : {}
+    );
+    res.send(data);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
 
-  
-  app.get("/property", async (req, res) => {
-    try {
-      let data = await PropertyModel.find()
-      res.send(data);
-    } catch (error) {
-      res.status(500).send(error.message);
-    }
-  });
-  app.get("/property/:id", async (req, res) => {
-    const {id}=req.params;
-    try {
-      let data = await PropertyModel.find({_id:id})
-      res.send(data);
-    } catch (error) {
-      res.status(500).send(error.message);
-    }
-  });
+app.get("/Car/:userId", async (req, res) => {
+  let { userId } = req.params;
+  // console.log(userId)
+  try {
+    let data = await CarModel.find({ "owner.id": userId });
+    res.send(data);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+app.patch("/Car/:carId", async (req, res) => {
+  let { carId } = req.params;
+  try {
+    let data = await CarModel.findByIdAndUpdate(carId, req.body);
+    res.send(data);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
 
-  app.patch("/user/:id", async (req, res) => {
-    try {
-      let { id } = req.params;
-      console.log(id)
-      let data = await UserModel.findByIdAndUpdate(id,req.body)
-      res.send(data);
-    } catch (error) {
-      res.status(500).send(error.message);
-    }
-  });
+app.delete("/Car/:carId", async (req, res) => {
+  let { carId } = req.params;
+  try {
+    let newCar = await CarModel.findByIdAndDelete(carId);
+    res.send("Deleted");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
 
-  app.get("/search/:search", async (req, res) => {
-        try {
-          let { search } = req.params;
-          console.log(search)
-          let data = await PropertyModel.find({$or:[{title:search},{location:search}]})
-          res.send(data);
-        } catch (error) {
-          res.status(500).send(error.message);
-        }
-      });
-
-  // app.delete("/contacts/:id", async (req, res) => {
-  //   let {id}=req.params;
-  //   try {
-  //     let newJob = await ContactModel.findByIdAndDelete(id)
-  //     res.send("Deleted");
-  //   } catch (error) {
-  //     res.status(500).send(error.message);
-  //   }
-  // });
-
- 
-
-  
-
-//   app.get("/job", async (req, res) => {
-//     try {
-//       let { location,contract } = req.query;
-//       let data = await JobModel.find((location&&contract)?{location,contract}:(location)?{location}:(contract)?{contract}:{})
-//       res.send(data);
-//     } catch (error) {
-//       res.status(500).send(error.message);
-//     }
-//   });
-// axios react-loading react-loading-skeleton react-spinners sweetalert2
-
-
-  
-// app.get("/job/:name", async (req, res) => {
-//     let {name}=req.params;
-//     console.log(name)
-//     try {
-//         let { location,contract } = req.query;
-//         console.log(name,location,contract)
-//       let data = await JobModel.find((location&&contract)?{location,contract,companyname:name}:(location)?{location,companyname:name}:(contract)?{contract,companyname:name}:{companyname:name})
-//       res.send(data);
-//     } catch (error) {
-//       res.status(500).send(error.message);
-//     }
-//   });
-
-
-
-
-
-
-
- module.exports = app;
+module.exports = app;
