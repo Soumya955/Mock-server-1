@@ -66,7 +66,7 @@ app.post("/Car", async (req, res) => {
 
 app.get("/Car", async (req, res) => {
   let { userId } = req.params;
-  let { color, price, mileage } = req.query;
+  let { color, price, mileage ,page} = req.query;
   let [price1, price2] = price.split("-");
   let [mileage1, mileage2] = mileage.split("-");
   try {
@@ -93,7 +93,8 @@ app.get("/Car", async (req, res) => {
         : mileage
         ? { mileage: { $gte: mileage1, $lte: mileage2 } }
         : {}
-    );
+    ).skip((page-1)*3)
+    .limit(3);
     res.send(data);
   } catch (error) {
     res.status(500).send(error.message);
