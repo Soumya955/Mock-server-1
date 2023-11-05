@@ -103,9 +103,10 @@ app.get("/Car", async (req, res) => {
 
 app.get("/Car/:userId", async (req, res) => {
   let { userId } = req.params;
-  // console.log(userId)
+  let { page} = req.query;
   try {
-    let data = await CarModel.find({ "owner.id": userId });
+    let data = await CarModel.find({ "owner.id": userId }).skip((page-1)*3)
+    .limit(3);
     res.send(data);
   } catch (error) {
     res.status(500).send(error.message);
