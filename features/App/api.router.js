@@ -2,27 +2,26 @@ const express = require("express");
 const bcrypt = require("bcrypt/bcrypt");
 const jwt = require("jsonwebtoken");
 const UserModel = require("./User.model");
-const CarModel = require("./Car.model");
+const {ProductModel }= require("./product.model");
+
 
 const app = express.Router();
 
-app.get("/", async (req, res) => {
-    res.send('working');
-});
-
 app.post("/signup", async (req, res) => {
-  const { email, password, name, address, phone } = req.body;
-  const user1 = await UserModel.findOne({ email });
+  const { name, email, phone, address, password } = req.body;
+  console.log(name, email, phone, address, password )
+  const user1 = await UserModel.findOne(email?{email}:{phone});
+  console.log(user1)
   if (!user1) {
     bcrypt.hash(password, 5, async function (err, hash) {
       if (err) {
         res.send("Something went wrong");
       }
       const user = new UserModel({
-        email,
         name,
-        address,
+        email,
         phone,
+        address,
         password: hash,
       });
       try {
@@ -39,97 +38,128 @@ app.post("/signup", async (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  const user = await UserModel.findOne({ email });
-  const hash = user.password;
-  bcrypt.compare(password, hash, function (err, result) {
-    if (err) {
-      res.send("Something went wrong");
-    }
-    if (result) {
-      const token = jwt.sign({ userId: user._id }, "srb");
-      res.json({ message: "Login Successfull", token, user });
-    } else {
-      res.send("Invalid Credentials");
-    }
-  });
+  const { email,phone, password } = req.body;
+  const user = await UserModel.findOne(email?{email}:{phone});
+  if(user){
+    const hash = user.password;
+    bcrypt.compare(password, hash, function (err, result) {
+      if (err) {
+        res.send("Something went wrong");
+      }
+      if (result) {
+        const token = jwt.sign({ userId: user._id }, "srb");
+        res.json({ message: "Login Successfull", token,user });
+      } else {
+        res.send("Invalid Credentials");
+      }
+    });
+  }else{
+    res.send("Invalid Credentials");
+  }
+  
 });
 
-app.post("/Car", async (req, res) => {
+app.post("/product", async (req, res) => {
   try {
-    let newCar = await CarModel.create(req.body);
-    res.send(newCar);
+    let newProduct = await ProductModel.create(req.body);
+    res.send(newProduct);
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
 
-app.get("/Car", async (req, res) => {
-  let { userId } = req.params;
-  let { color, price, mileage ,page} = req.query;
-  let [price1, price2] = price.split("-");
-  let [mileage1, mileage2] = mileage.split("-");
+app.delete("/product/:id", async (req, res) => {
+  let { id } = req.params;
+  console.log(id);
   try {
-    let data = await CarModel.find(
-      color && price && mileage
-        ? {
-            colors: color,
-            listPrice: { $gte: price1, $lte: price2 },
-            mileage: { $gte: mileage1, $lte: mileage2 },
-          }
-        : color && mileage
-        ? { colors: color, mileage: { $gte: mileage1, $lte: mileage2 } }
-        : price && mileage
-        ? {
-            listPrice: { $gte: price1, $lte: price2 },
-            mileage: { $gte: mileage1, $lte: mileage2 },
-          }
-        : price && color
-        ? { colors: color, listPrice: { $gte: price1, $lte: price2 } }
-        : color
-        ? { colors: color }
-        : price
-        ? { listPrice: { $gte: price1, $lte: price2 } }
-        : mileage
-        ? { mileage: { $gte: mileage1, $lte: mileage2 } }
-        : {}
-    ).skip((page-1)*3)
-    .limit(3);
-    res.send(data);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-app.get("/Car/:userId", async (req, res) => {
-  let { userId } = req.params;
-  let { page} = req.query;
-  try {
-    let data = await CarModel.find({ "owner.id": userId }).skip((page-1)*3)
-    .limit(3);
-    res.send(data);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-app.patch("/Car/:carId", async (req, res) => {
-  let { carId } = req.params;
-  try {
-    let data = await CarModel.findByIdAndUpdate(carId, req.body);
-    res.send(data);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-app.delete("/Car/:carId", async (req, res) => {
-  let { carId } = req.params;
-  try {
-    let newCar = await CarModel.findByIdAndDelete(carId);
+    let newProduct = await ProductModel.findByIdAndDelete(id);
     res.send("Deleted");
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
+app.patch("/product/:id", async (req, res) => {
+  let { id } = req.params;
+  console.log(id);
+  try {
+    let newProduct = await ProductModel.findByIdAndUpdate(id,req.body);
+    res.send(newProduct);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+app.get("/product", async (req, res) => {
+  try {
+    let data = await ProductModel.find();
+    res.send(data);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+app.get("/product/:userId", async (req, res) => {
+  let {userId}=req.params;
+  try {
+    let data = await ProductModel.find({"user._id":userId});
+    res.send(data);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+
+
+app.patch("/cart/:id", async (req, res) => {
+  let {id}=req.params;
+  try {
+    const updatedUser = await UserModel.findByIdAndUpdate(
+     id, req.body
+    );
+    res.send(updatedUser);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+
+
+// app.get("/product", async (req, res) => {
+//   try {
+//     let { location, contract } = req.query;
+//     let data = await ProductModel.find(
+//       location && contract
+//         ? { location, contract }
+//         : location
+//         ? { location }
+//         : contract
+//         ? { contract }
+//         : {}
+//     );
+//     res.send(data);
+//   } catch (error) {
+//     res.status(500).send(error.message);
+//   }
+// });
+
+// app.get("/product/:name", async (req, res) => {
+//   let { name } = req.params;
+//   console.log(name);
+//   try {
+//     let { location, contract } = req.query;
+//     console.log(name, location, contract);
+//     let data = await ProductModel.find(
+//       location && contract
+//         ? { location, contract, companyname: name }
+//         : location
+//         ? { location, companyname: name }
+//         : contract
+//         ? { contract, companyname: name }
+//         : { companyname: name }
+//     );
+//     res.send(data);
+//   } catch (error) {
+//     res.status(500).send(error.message);
+//   }
+// });
 
 module.exports = app;
